@@ -1,4 +1,6 @@
-AddCSLuaFile()
+if (SERVER) then
+    AddCSLuaFile()
+end
 
 VManip:RegisterAnim("Flashlight_In", {
     ["model"] = "weapons/c_slog_vm_flashlight.mdl",
@@ -32,7 +34,6 @@ VManip:RegisterAnim("Flashlight_Loop", {
     ["locktoply"] = false
 })
 
-
 VManip:RegisterAnim("Flashlight_Run", {
     ["model"] = "weapons/c_slog_vm_flashlight.mdl",
     ["lerp_peak"] = 0.25,
@@ -49,8 +50,6 @@ VManip:RegisterAnim("Flashlight_Run", {
     ["locktoply"] = false
 })
 
-
-
 VManip:RegisterAnim("Flashlight_Out", {
     ["model"] = "weapons/c_slog_vm_flashlight.mdl",
     ["lerp_peak"] = 0.95,
@@ -66,8 +65,6 @@ VManip:RegisterAnim("Flashlight_Out", {
     ["preventquit"] = false,
     ["locktoply"] = false
 })
-
-
 
 VManip:RegisterAnim("Flashlight_Shoulder_Put", {
     ["model"] = "weapons/c_slog_vm_flashlight.mdl",
