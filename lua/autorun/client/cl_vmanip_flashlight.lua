@@ -218,14 +218,3 @@ do
     end)
 
 end
-
-hook.Add("Think", "fuck shadows", function()
-    for num, ent in ipairs( ents.GetAll() ) do
-        if ent:GetClass() == "gmod_lamp" then
-            ent:SetNoDraw( true )
-            return
-            -- ent:DrawShadow( false )
-            -- ent:DestroyShadow()
-        end
-    end
-end)
