@@ -14,8 +14,6 @@ hook.Add("PlayerDeath", "VManip_Flashlight", function( ply )
     ply:SetNWBool( "VManip_Flashlight", false )
 end)
 
-print("sas")
-
 do
 
     util.AddNetworkString( "VManip_Flashlight" )
