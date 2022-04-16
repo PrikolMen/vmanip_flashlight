@@ -1,71 +1,154 @@
--- Functions Localization
-local ProjectedTexture = ProjectedTexture
-local IsValid = IsValid
+module( "better_flashlight", package.seeall )
 
 -- Sounds
-local deploy_snd = Sound( "vmanip/flashlight/deploy.ogg" )
-local holster_snd = Sound( "vmanip/flashlight/holster.ogg" )
-local toggle_snd = Sound( "vmanip/flashlight/toggle.ogg" )
+Sounds = {
+    Sound( "better_flashlight/deploy.ogg" ),
+    Sound( "better_flashlight/holster.ogg" ),
+    Sound( "better_flashlight/toggle.ogg" )
+}
 
--- Flashlight Creating
-local CreateFlashlight
+-- Base Functions
+function Get( ply )
+    return ply["Better Flashlight"]
+end
+
+function Set( ply, flashlight )
+    ply["Better Flashlight"] = flashlight
+end
+
+-- Control Functions
 do
 
-    local white = color_white
-    local texture = "effects/flashlight001"
+    local net_Start = net.Start
+    local net_WriteUInt = net.WriteUInt
+    local net_SendToServer = net.SendToServer
 
-    function CreateFlashlight()
-        local flashlight = ProjectedTexture()
-        flashlight:SetEnableShadows( true )
-        flashlight:SetShadowFilter( 0 )
-        flashlight:SetTexture( texture )
-        flashlight:SetColor( white )
-        flashlight:SetFarZ( 824 )
-        return flashlight
+    -- Enable
+    function Enable()
+        net_Start( "Better Flashlight" )
+            net_WriteUInt( 0, 2 )
+        net_SendToServer()
+    end
+
+    -- Disable
+    function Disable()
+        net_Start( "Better Flashlight" )
+            net_WriteUInt( 1, 2 )
+        net_SendToServer()
+    end
+
+    function Toggle()
+        net_Start( "Better Flashlight" )
+            net_WriteUInt( 2, 2 )
+        net_SendToServer()
     end
 
 end
 
+-- Player Functions
 do
 
-    -- Functions Localization
-    local CurTime = CurTime
-    local math_random = math.random
-    local timer_Simple = timer.Simple
+    local PLAYER = FindMetaTable( "Player" )
 
-    local net_Start = net.Start
-    local net_WriteBool = net.WriteBool
-    local net_SendToServer = net.SendToServer
+    function PLAYER:GetFlashlight()
+        return Get( self )
+    end
 
-    -- Flashlight Creating and blocking source flashlight
-    hook.Add("PlayerBindPress", "VManip_Flashlight", function( ply, bind, pressed )
-        if (bind == "impulse 100") then
-            if (pressed) then
-                if (ply.VManip_Flashlight_Delay or 0) > CurTime() then
-                    return true
-                end
+    -- IsOn
+    function PLAYER:FlashlightIsOn()
+        return self:GetNWBool( "Better Flashlight", false ) and not self:GetNWBool( "Better Flashlight No Power", false )
+    end
 
-                ply.VManip_Flashlight_Delay = CurTime() + math_random( 6, 10 ) / 10
+    -- Flashlight Allow
+    function PLAYER:AllowFlashlight()
+    end
 
-                if ply:ShouldDrawLocalPlayer() then
-                    local flashlight = VManip_Flashlight
-                    if IsValid( flashlight ) then
+    -- Can Use
+    do
 
-                        net_Start( "VManip_Flashlight" )
-                            net_WriteBool( false )
-                        net_SendToServer()
+        local mp_flashlight = "mp_flashlight"
+        local math_random = math.random
+        local cvars_Bool = cvars.Bool
+        local gmod_suit = "gmod_suit"
+        local CurTime = CurTime
 
-                        flashlight:Remove()
+        -- Flashlight Allow
+        function PLAYER:IsFlashlightAllowed()
+            return self:GetNWBool( "Better Flashlight Allowed", true ) and game.GetWorld():GetNWBool( mp_flashlight, false )
+        end
 
-                    else
-                        net_Start( "VManip_Flashlight" )
-                            net_WriteBool( true )
-                        net_SendToServer()
+        -- HEV Suit
+        function PLAYER:IsSuitNoPower()
+            return cvars_Bool( gmod_suit ) and self:IsSuitEquipped() and (self:GetSuitPower() < 5)
+        end
 
-                        VManip_Flashlight = CreateFlashlight()
-                        VManip_Flashlight:SetFOV( ply:GetFOV() )
+        function PLAYER:CanUseFlashlight()
+            if self:GetNWBool( "Better Flashlight No Power", false ) then
+                return false
+            end
+
+            if (self["Better Flashlight Delay"] or 0) > CurTime() then
+                return false
+            end
+
+            if self:FlashlightIsOn() then
+                self["Better Flashlight Delay"] = CurTime() + math_random( 6, 10 ) / 10
+                return true
+            end
+
+            if self:IsFlashlightAllowed() then
+                if self:Alive() then
+                    if self:IsSuitNoPower() then
+                        return false
                     end
 
+                    self["Better Flashlight Delay"] = CurTime() + math_random( 6, 10 ) / 10
+                    return true
+                end
+            end
+
+            return false
+        end
+
+    end
+
+    -- ShouldDrawLocalFlashlight
+    do
+
+        local index
+        hook.Add("RenderScene", "Better Flashlight", function()
+            hook.Remove( "RenderScene", "Better Flashlight" )
+            index = LocalPlayer():EntIndex()
+        end)
+
+        function PLAYER:ShouldDrawLocalFlashlight()
+            if (index == self:EntIndex()) then
+                if (VManip == nil) then
+                    return false
+                end
+
+                if self:ShouldDrawLocalPlayer() then
+                    return false
+                end
+
+                return true
+            end
+
+            return false
+        end
+
+    end
+
+end
+
+-- Flashlight Controls
+do
+    local timer_Simple = timer.Simple
+    hook.Add("PlayerBindPress", "Better Flashlight", function( ply, bind, pressed )
+        if (bind == "impulse 100") then
+            if (pressed) and ply:CanUseFlashlight() then
+                if ply:ShouldDrawLocalPlayer() or (VManip == nil) then
+                    Toggle()
                     return true
                 end
 
@@ -73,146 +156,132 @@ do
                     if VManip:PlaySegment( "Flashlight_Out", true ) then
                         timer_Simple(0.3, function()
                             if IsValid( ply ) then
-                                net_Start( "VManip_Flashlight" )
-                                    net_WriteBool( false )
-                                net_SendToServer()
-
-                                local flashlight = VManip_Flashlight
-                                if IsValid( flashlight ) then
-                                    flashlight:Remove()
-                                end
+                                ply:EmitSound( Sounds[2] )
                             end
-                        end)
 
-                        timer_Simple(0.5, function()
-                            if IsValid( ply ) then
-                                ply:EmitSound( holster_snd )
-                            end
+                            Disable()
                         end)
                     end
-                else
-
-                    if VManip:PlayAnim( "Flashlight_In" ) then
-                        ply:EmitSound( deploy_snd )
-
-                        timer_Simple(0.4, function()
-                            if IsValid( ply ) then
-                                net_Start( "VManip_Flashlight" )
-                                    net_WriteBool( true )
-                                net_SendToServer()
-
-                                local flashlight = VManip_Flashlight
-                                if IsValid( flashlight ) then
-                                    flashlight:Remove()
-                                end
-
-                                VManip_Flashlight = CreateFlashlight()
-                                VManip_Flashlight:SetFOV( ply:GetFOV() )
-                            end
-                        end)
-                    end
+                elseif VManip:PlayAnim( "Flashlight_In" ) then
+                    ply:EmitSound( Sounds[1] )
+                    timer_Simple(0.4, function()
+                        Enable()
+                    end)
                 end
-
             end
 
             return true
         end
     end)
-
 end
 
--- Flashlight Render
-local function ThirdPersionRender( flashlight, ply )
-    local attachment_id = ply:LookupAttachment( "eyes" )
-    if (attachment_id > 0) then
-        local attachment = ply:GetAttachment( attachment_id )
-        local ang = attachment.Ang
-        flashlight:SetPos( attachment.Pos + (ang:Forward() * 10) )
-        flashlight:SetAngles( ang )
-    else
-        flashlight:SetPos( ply:EyePos() )
-        flashlight:SetAngles( ply:EyeAngles() )
+-- Net Action
+net.Receive("Better Flashlight", function()
+    if (VManip == nil) or VManip:IsActive() then
+        return
     end
 
-    flashlight:Update()
-end
-
-local angleOffset = Angle( 180, -10, 0 )
-local function FirstPersionRender( flashlight, vm, ply )
-    local att = vm:LookupAttachment( "FlashLight" )
-    if (att > 0) then
-        local posang = vm:GetAttachment( att )
-        flashlight:SetPos( posang.Pos - (posang.Ang:Forward() * 10) )
-        flashlight:SetAngles( posang.Ang + angleOffset )
-        flashlight:Update()
-    else
-        ThirdPersionRender( flashlight, ply )
+    local ply = LocalPlayer()
+    if IsValid( ply ) and ply:Alive() then
+        VManip:PlaySegment( "Flashlight_Out", true )
+        ply:EmitSound( Sounds[2] )
     end
-end
+end)
 
-local function LocalPlayerFlashlight( ply )
-    local flashlight = VManip_Flashlight
-    if IsValid( flashlight ) then
-        if IsValid( ply ) then
-            if ply:Alive() then
-                if ply:ShouldDrawLocalPlayer() then
-                    ThirdPersionRender( flashlight, ply )
-                    return
-                end
-
-                local vm = VManip:GetVMGesture()
-                if IsValid( vm ) then
-                    FirstPersionRender( flashlight, vm, ply )
-                else
-                    ThirdPersionRender( flashlight, ply )
-                end
-            else
-                flashlight:Remove()
-            end
-        end
-    end
-end
-
-local function OtherPlayersFlashlight( ply )
-    if ply:GetNWBool( "VManip_Flashlight", false ) then
-
-        local flashlight = ply.VManip_Flashlight
-        if IsValid( flashlight ) then
-            ThirdPersionRender( flashlight, ply )
-            return
-        end
-
-        ply.VManip_Flashlight = CreateFlashlight()
-        ply.VManip_Flashlight:SetFOV( ply:GetFOV() )
-
-    else
-
-        local flashlight = ply.VManip_Flashlight
-        if IsValid( flashlight ) then
-            flashlight:Remove()
-        end
-
-    end
-end
-
+-- Create Flashlight
 do
 
-    local lpIndex
-    hook.Add("RenderScene", "VManip_Flashlight", function()
-        hook.Remove( "RenderScene", "VManip_Flashlight" )
-        lpIndex = LocalPlayer():EntIndex()
-    end)
-
-    local player_GetHumans = player.GetHumans
+    local ProjectedTexture = ProjectedTexture
+    local texture = "effects/flashlight001"
+    local white = color_white
+    local IsValid = IsValid
     local ipairs = ipairs
 
-    -- Flashlight posing in world and creating flashlight for other players
-    hook.Add("Think", "VManip_Flashlight", function()
+    list = {}
+
+    timer.Create("Better Flashlight", 1, 0, function()
+        for num, data in ipairs( list ) do
+            if IsValid( data[1] ) then
+                if IsValid( data[2] ) then
+                    continue
+                end
+
+                data[1]:Remove()
+            end
+
+            table.remove( list, num )
+        end
+    end)
+
+    function GetList()
+        return list
+    end
+
+    function Create( ply )
+        local flashlight = ProjectedTexture()
+        flashlight:SetEnableShadows( true )
+        flashlight:SetShadowFilter( 0 )
+        flashlight:SetTexture( texture )
+        flashlight:SetColor( white )
+        flashlight:SetFarZ( 824 )
+
+        table.insert( list, { flashlight, ply } )
+
+        if IsValid( ply ) and ply:IsPlayer() then
+            flashlight:SetFOV( ply:GetFOV() )
+        end
+
+        return flashlight
+    end
+
+end
+
+-- Flashlight posing in world and flashlight creating
+do
+
+    local flashlight_attachment = "FlashLight"
+    local player_GetHumans = player.GetHumans
+    local angleOffset = Angle( 180, -10, 0 )
+    local eyes_attachment = "eyes"
+    local IsValid = IsValid
+    local ipairs = ipairs
+
+    hook.Add("Think", "Better Flashlight", function()
         for num, ply in ipairs( player_GetHumans() ) do
-            if (lpIndex == ply:EntIndex()) then
-                LocalPlayerFlashlight( ply )
-            else
-                OtherPlayersFlashlight( ply )
+            local flashlight = ply:GetFlashlight()
+            if ply:FlashlightIsOn() then
+                if IsValid( flashlight ) then
+                    if ply:ShouldDrawLocalFlashlight() then
+                        local vm = VManip:GetVMGesture()
+                        if IsValid( vm ) then
+                            local att = vm:LookupAttachment( flashlight_attachment )
+                            if (att > 0) then
+                                local posang = vm:GetAttachment( att )
+                                flashlight:SetPos( posang.Pos - (posang.Ang:Forward() * 10) )
+                                flashlight:SetAngles( posang.Ang + angleOffset )
+                                flashlight:Update()
+                                return
+                            end
+                        end
+                    end
+
+                    local attachment_id = ply:LookupAttachment( eyes_attachment )
+                    if (attachment_id > 0) then
+                        local attachment = ply:GetAttachment( attachment_id )
+                        local ang = attachment.Ang
+                        flashlight:SetPos( attachment.Pos + (ang:Forward() * 10) )
+                        flashlight:SetAngles( ang )
+                    else
+                        flashlight:SetPos( ply:EyePos() )
+                        flashlight:SetAngles( ply:EyeAngles() )
+                    end
+
+                    flashlight:Update()
+                else
+                    Set( ply, Create( ply ) )
+                end
+            elseif IsValid( flashlight ) then
+                flashlight:Remove()
             end
         end
     end)
