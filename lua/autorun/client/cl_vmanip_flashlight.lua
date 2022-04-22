@@ -2,9 +2,18 @@ module( "better_flashlight", package.seeall )
 
 -- Sounds
 Sounds = {
+
+    -- Basic Sounds
     Sound( "better_flashlight/deploy.ogg" ),
     Sound( "better_flashlight/holster.ogg" ),
-    Sound( "better_flashlight/toggle.ogg" )
+    Sound( "better_flashlight/toggle.ogg" ),
+
+    -- Shoulder Sounds
+    Sound( "bettet_flashlight/shoulder_move_1.ogg" ),
+    Sound( "bettet_flashlight/shoulder_move_2.ogg" ),
+    Sound( "bettet_flashlight/shoulder_attach.ogg" ),
+    Sound( "bettet_flashlight/shoulder_detach.ogg" )
+
 }
 
 -- Base Functions
@@ -37,6 +46,7 @@ do
         net_SendToServer()
     end
 
+    -- Toggle
     function Toggle()
         net_Start( "Better Flashlight" )
             net_WriteUInt( 2, 2 )
@@ -141,43 +151,148 @@ do
 
 end
 
+
+-- Shoulder Mode
+do
+
+    Shoulder = false
+
+    function SetShoulder( bool )
+        Shoulder = bool == true
+    end
+
+    function IsShoulder()
+        return Shoulder or false
+    end
+
+end
+
+-- Flashlight is active
+do
+
+    local activeAnims = {
+        ["Flashlight_Shoulder_Take"] = true,
+        ["Flashlight_Shoulder_Put"] = true,
+        ["Flashlight_In"] = true
+    }
+
+    function IsActive()
+        return activeAnims[ VManip:GetCurrentAnim() ] or false
+    end
+
+end
+
 -- Flashlight Controls
 do
     local timer_Simple = timer.Simple
-    hook.Add("PlayerBindPress", "Better Flashlight", function( ply, bind, pressed )
-        if (bind == "impulse 100") then
-            if (pressed) and ply:CanUseFlashlight() then
-                if ply:ShouldDrawLocalPlayer() or (VManip == nil) then
-                    Toggle()
-                    return true
-                end
 
-                if (VManip:GetCurrentAnim() == "Flashlight_In") or (VManip:GetCurrentAnim() == "Flashlight_Shoulder_Take") then
-                    if VManip:PlaySegment( "Flashlight_Out", true ) then
-                        timer_Simple(0.3, function()
-                            if IsValid( ply ) then
-                                ply:EmitSound( Sounds[2] )
-                            end
-
-                            Disable()
-                        end)
-                    end
-                elseif VManip:PlayAnim( "Flashlight_In" ) then
-                    ply:EmitSound( Sounds[1] )
-                    timer_Simple(0.4, function()
-                        Enable()
-                    end)
-                end
+    function Impulse100( ply, bind, pressed )
+        if (pressed) and ply:CanUseFlashlight() then
+            if ply:ShouldDrawLocalPlayer() or (VManip == nil) then
+                return Toggle()
             end
 
-            return true
+            if ply:KeyDown( IN_WALK ) then
+                if IsShoulder() then
+                    local anim = VManip:PlayAnim( "Flashlight_Shoulder_Take" )
+                    SetShoulder( anim )
+                    if anim then
+                        ply:EmitSound( Sounds[5] )
+
+                        timer_Simple(0.4 * FrameTime(), function()
+                            if IsValid( ply ) then
+                                ply:EmitSound( Sounds[7] )
+                            end
+
+                            timer_Simple(0.6 * FrameTime(), function()
+                                VManip:PlayAnim( "Flashlight_In" )
+                            end)
+                        end)
+                    end
+                elseif IsActive() then
+                    local anim = VManip:PlaySegment( "Flashlight_Shoulder_Put", true )
+                    SetShoulder( anim )
+                    if anim then
+                        SetShoulder( true )
+                        ply:EmitSound( Sounds[4] )
+
+                        timer_Simple(0.1 * FrameTime(), function()
+                            if IsValid( ply ) then
+                                ply:EmitSound( Sounds[6] )
+                            end
+                        end)
+                    end
+                end
+
+                return
+            end
+
+            if IsActive() then
+
+                if VManip:PlaySegment( "Flashlight_Out", true ) then
+                    timer_Simple(0.3 * FrameTime(), function()
+                        if IsValid( ply ) then
+                            ply:EmitSound( Sounds[2] )
+                            if ply:FlashlightIsOn() then
+                                Disable()
+                            end
+                        end
+                    end)
+                end
+
+            else
+
+                if IsShoulder() then
+                    if VManip:PlayAnim( "Flashlight_EnableDisable" ) then
+                        ply:EmitSound( Sounds[5] )
+
+                        timer_Simple(0.4 * FrameTime(), function()
+                            if IsValid( ply ) then
+                                ply:EmitSound( Sounds[2] )
+                                if ply:FlashlightIsOn() then
+                                    Disable()
+                                else
+                                    Enable()
+                                end
+                            end
+                        end)
+                    end
+
+                    return
+                end
+
+                if VManip:IsActive() then return end
+                if VManip:PlayAnim( "Flashlight_In" ) then
+                    ply:EmitSound( Sounds[1] )
+                    timer_Simple(0.4 * FrameTime(), function()
+                        if IsValid( ply ) then
+                            if ply:FlashlightIsOn() then
+                                return
+                            end
+
+                            Enable()
+                        end
+                    end)
+                end
+
+            end
+
         end
-    end)
+    end
+
 end
+
+-- Impulse 100 Grabber
+hook.Add("PlayerBindPress", "Better Flashlight", function( ply, bind, pressed )
+    if (bind == "impulse 100") then
+        Impulse100( ply, bind, pressed )
+        return true
+    end
+end)
 
 -- Net Action
 net.Receive("Better Flashlight", function()
-    if (VManip == nil) or VManip:IsActive() then
+    if (VManip == nil) or IsActive() or VManip:IsActive() then
         return
     end
 
