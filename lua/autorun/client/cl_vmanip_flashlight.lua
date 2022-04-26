@@ -291,17 +291,25 @@ hook.Add("PlayerBindPress", "Better Flashlight", function( ply, bind, pressed )
 end)
 
 -- Net Action
-net.Receive("Better Flashlight", function()
-    if (VManip == nil) or IsActive() or VManip:IsActive() then
-        return
-    end
+do
+    local timer_Simple = timer.Simple
+    net.Receive("Better Flashlight", function()
+        if (VManip == nil) then
+            return
+        end
 
-    local ply = LocalPlayer()
-    if IsValid( ply ) and ply:Alive() then
-        VManip:PlaySegment( "Flashlight_Out", true )
-        ply:EmitSound( Sounds[2] )
-    end
-end)
+        local ply = LocalPlayer()
+        if IsValid( ply ) and ply:Alive() then
+            if VManip:PlaySegment( "Flashlight_Out", true ) then
+                timer_Simple(0.3 * FrameTime(), function()
+                    if IsValid( ply ) then
+                        ply:EmitSound( Sounds[2] )
+                    end
+                end)
+            end
+        end
+    end)
+end
 
 -- Create Flashlight
 do

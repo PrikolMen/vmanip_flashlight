@@ -26,8 +26,11 @@ function Enable( ply )
     ply:SetNWBool( "Better Flashlight", true )
 end
 
-function Disable( ply )
+function Disable( ply, send )
     ply:SetNWBool( "Better Flashlight", false )
+    if (send == nil) then return end
+    net.Start("Better Flashlight")
+    net.Send( ply )
 end
 
 function Toggle( ply )
@@ -161,6 +164,14 @@ local flashlight_power_less_speed = CreateConVar( "flashlight_power_less_speed",
 cvars.AddChangeCallback("flashlight_power_less_speed", function( name, old, new )
     flashlight_power_less_speed = tonumber( new ) / 100 * 0.5 + 0.2
 end, "Better Flashlight")
+
+-- Blocking Props Pickup
+hook.Add("AllowPlayerPickup", "Better Flashlight", function( ply, ent )
+    if ply:FlashlightIsOn() then
+        Disable( ply, true )
+        return false
+    end
+end)
 
 -- GLobal Think
 hook.Add("PlayerPostThink", "Better Flashlight", function( ply )
