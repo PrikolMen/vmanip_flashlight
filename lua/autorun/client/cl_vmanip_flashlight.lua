@@ -186,6 +186,39 @@ end
 do
     local timer_Simple = timer.Simple
 
+    concommand.Add("flashlight_shoulder", function( ply )
+        if IsShoulder() then
+            local anim = VManip:PlayAnim( "Flashlight_Shoulder_Take" )
+            SetShoulder( anim )
+            if anim then
+                ply:EmitSound( Sounds[5] )
+
+                timer_Simple(0.4 * FrameTime(), function()
+                    if IsValid( ply ) then
+                        ply:EmitSound( Sounds[7] )
+                    end
+
+                    timer_Simple(0.6 * FrameTime(), function()
+                        VManip:PlayAnim( "Flashlight_In" )
+                    end)
+                end)
+            end
+        elseif IsActive() then
+            local anim = VManip:PlaySegment( "Flashlight_Shoulder_Put", true )
+            SetShoulder( anim )
+            if anim then
+                SetShoulder( true )
+                ply:EmitSound( Sounds[4] )
+
+                timer_Simple(0.1 * FrameTime(), function()
+                    if IsValid( ply ) then
+                        ply:EmitSound( Sounds[6] )
+                    end
+                end)
+            end
+        end
+    end)
+
     function Impulse100( ply, bind, pressed )
         if (pressed) and ply:CanUseFlashlight() then
             if ply:ShouldDrawLocalPlayer() or (VManip == nil) then
@@ -193,37 +226,7 @@ do
             end
 
             if ply:KeyDown( IN_WALK ) then
-                if IsShoulder() then
-                    local anim = VManip:PlayAnim( "Flashlight_Shoulder_Take" )
-                    SetShoulder( anim )
-                    if anim then
-                        ply:EmitSound( Sounds[5] )
-
-                        timer_Simple(0.4 * FrameTime(), function()
-                            if IsValid( ply ) then
-                                ply:EmitSound( Sounds[7] )
-                            end
-
-                            timer_Simple(0.6 * FrameTime(), function()
-                                VManip:PlayAnim( "Flashlight_In" )
-                            end)
-                        end)
-                    end
-                elseif IsActive() then
-                    local anim = VManip:PlaySegment( "Flashlight_Shoulder_Put", true )
-                    SetShoulder( anim )
-                    if anim then
-                        SetShoulder( true )
-                        ply:EmitSound( Sounds[4] )
-
-                        timer_Simple(0.1 * FrameTime(), function()
-                            if IsValid( ply ) then
-                                ply:EmitSound( Sounds[6] )
-                            end
-                        end)
-                    end
-                end
-
+                RunConsoleCommand("flashlight_shoulder")
                 return
             end
 
