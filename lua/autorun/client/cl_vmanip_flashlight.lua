@@ -318,7 +318,6 @@ end
 do
 
     local ProjectedTexture = ProjectedTexture
-    local texture = "effects/flashlight001"
     local white = color_white
     local IsValid = IsValid
     local ipairs = ipairs
@@ -347,7 +346,7 @@ do
         local flashlight = ProjectedTexture()
         flashlight:SetEnableShadows( true )
         flashlight:SetShadowFilter( 0 )
-        flashlight:SetTexture( texture )
+        flashlight:SetTexture( ply:GetNWString( "Better Flashlight Texture", "effects/flashlight001" ) )
         flashlight:SetColor( white )
         flashlight:SetFarZ( 824 )
 

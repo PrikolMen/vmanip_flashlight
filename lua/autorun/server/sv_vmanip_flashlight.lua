@@ -93,6 +93,11 @@ do
         return self:GetNWBool( "Better Flashlight Allowed", true ) and mp_flashlight
     end
 
+    -- Flashlight Texture
+    function PLAYER:SetFlashlightTexture( path )
+        self:SetNWString( "Better Flashlight Texture", path or "effects/flashlight001" )
+    end
+
     -- Can Use
     function PLAYER:CanUseFlashlight()
         if self:GetNWBool( "Better Flashlight No Power", false ) then
