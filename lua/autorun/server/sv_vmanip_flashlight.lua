@@ -171,12 +171,12 @@ cvars.AddChangeCallback("flashlight_power_less_speed", function( name, old, new 
 end, "Better Flashlight")
 
 -- Blocking Props Pickup
-hook.Add("AllowPlayerPickup", "Better Flashlight", function( ply, ent )
-    if ply:FlashlightIsOn() then
-        Disable( ply, true )
-        return false
-    end
-end)
+-- hook.Add("AllowPlayerPickup", "Better Flashlight", function( ply, ent )
+--     if ply:FlashlightIsOn() then
+--         Disable( ply, true )
+--         return false
+--     end
+-- end)
 
 -- GLobal Think
 hook.Add("PlayerPostThink", "Better Flashlight", function( ply )
