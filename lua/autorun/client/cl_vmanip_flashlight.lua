@@ -9,10 +9,10 @@ Sounds = {
     Sound( "better_flashlight/toggle.ogg" ),
 
     -- Shoulder Sounds
-    Sound( "bettet_flashlight/shoulder_move_1.ogg" ),
-    Sound( "bettet_flashlight/shoulder_move_2.ogg" ),
-    Sound( "bettet_flashlight/shoulder_attach.ogg" ),
-    Sound( "bettet_flashlight/shoulder_detach.ogg" )
+    Sound( "better_flashlight/shoulder_move_1.ogg" ),
+    Sound( "better_flashlight/shoulder_move_2.ogg" ),
+    Sound( "better_flashlight/shoulder_attach.ogg" ),
+    Sound( "better_flashlight/shoulder_detach.ogg" )
 
 }
 
