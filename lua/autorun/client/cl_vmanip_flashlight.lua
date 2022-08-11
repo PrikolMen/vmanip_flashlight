@@ -93,7 +93,7 @@ do
         end
 
         function PLAYER:CanUseFlashlight()
-            if self:GetNWBool( "Better Flashlight No Power", false ) then
+            if self:GetNWBool( "Better Flashlight No Power", false ) or self:InVehicle() then
                 return false
             end
 

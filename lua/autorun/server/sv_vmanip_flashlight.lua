@@ -44,6 +44,9 @@ end
 -- Disable Flashlight after player death
 hook.Add( "DoPlayerDeath", "Better Flashlight", Disable )
 
+-- Disable Flashlight when entering vehicle
+hook.Add( "PlayerEnteredVehicle", "Better Flashlight", Disable )
+
 -- HEV Suit
 local gmod_suit = cvars.Bool( "gmod_suit", false )
 cvars.AddChangeCallback("gmod_suit", function( name, old, new )
@@ -100,7 +103,7 @@ do
 
     -- Can Use
     function PLAYER:CanUseFlashlight()
-        if self:GetNWBool( "Better Flashlight No Power", false ) then
+        if self:GetNWBool( "Better Flashlight No Power", false ) or self:InVehicle() then
             return false
         end
 
